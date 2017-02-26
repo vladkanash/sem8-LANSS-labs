@@ -1,5 +1,4 @@
 #ifdef _WIN32
-
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 
@@ -38,5 +37,23 @@ struct icmphdr {
         } echo;
     } un;
 };
-
+#elif __linux__
+    #include <netinet/ip_icmp.h>
 #endif
+
+#define PACKETSIZE	64 + sizeof(struct iphdr)
+#define DEFAULT_TTL 30
+
+struct packet {
+#ifdef __linux__
+    struct iphdr ip;
+#endif
+    struct icmphdr icmp;
+    char msg[PACKETSIZE - sizeof(struct icmphdr) - sizeof(struct iphdr)];
+};
+
+struct response_packet {
+    struct iphdr ip;
+    struct icmphdr icmp;
+    char msg[PACKETSIZE - sizeof(struct icmphdr) - sizeof(struct iphdr)];
+};
