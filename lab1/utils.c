@@ -2,6 +2,8 @@
 // Created by root on 27.2.17.
 //
 
+#include <stdio.h>
+#include <string.h>
 #include "utils.h"
 
 unsigned short checksum(void *b, int len) {
@@ -17,5 +19,19 @@ unsigned short checksum(void *b, int len) {
     sum += (sum >> 16);
     result = (unsigned short) ~sum;
     return result;
+}
+
+void ip_to_str(unsigned long ip, char *str, size_t size) {
+    if (size < 16) {
+        return;
+    }
+
+    memset(str, 0, size);
+    unsigned char bytes[4];
+    bytes[0] = ip & 0xFF;
+    bytes[1] = (ip >> 8) & 0xFF;
+    bytes[2] = (ip >> 16) & 0xFF;
+    bytes[3] = (ip >> 24) & 0xFF;
+    sprintf(str, "%d.%d.%d.%d", bytes[3], bytes[2], bytes[1], bytes[0]);
 }
 

@@ -1,5 +1,4 @@
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 
 // ICMP packet types
@@ -11,7 +10,6 @@
 // Minimum ICMP packet size, in bytes
 #define ICMP_MIN 8
 
-// The IP header
 struct iphdr {
     BYTE ihl:4;           // Length of the header in dwords
     BYTE version:4;         // Version of IP
@@ -44,7 +42,7 @@ struct icmphdr {
 #define PACKETSIZE	64 + sizeof(struct iphdr)
 #define DEFAULT_TTL 30
 
-struct packet {
+struct ping_request {
 #ifdef __linux__
     struct iphdr ip;
 #endif
@@ -52,7 +50,7 @@ struct packet {
     char msg[PACKETSIZE - sizeof(struct icmphdr) - sizeof(struct iphdr)];
 };
 
-struct response_packet {
+struct ping_response {
     struct iphdr ip;
     struct icmphdr icmp;
     char msg[PACKETSIZE - sizeof(struct icmphdr) - sizeof(struct iphdr)];

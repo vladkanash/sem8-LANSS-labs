@@ -93,12 +93,12 @@ void get_my_addr(struct sockaddr_in *myAddr) {
 #endif
 }
 
-void init_packet(struct packet *pckt,
+void init_packet(struct ping_request *pckt,
                  const struct sockaddr_in *addr,
                  const struct sockaddr_in *src_addr,
                  int* cnt) {
     int i;
-    memset(pckt, 0, sizeof(struct packet));
+    memset(pckt, 0, sizeof(struct ping_request));
 
 #ifdef __linux__
     pckt->ip.tot_len = htons(sizeof(struct iphdr) + sizeof(struct icmphdr));
@@ -121,15 +121,16 @@ void init_packet(struct packet *pckt,
     pckt->icmp.type = ICMP_ECHO;
     pckt->icmp.un.echo.id = pid;
     pckt->icmp.un.echo.sequence = (*cnt)++;
-    pckt->icmp.checksum = checksum(pckt, sizeof(struct packet));
+    pckt->icmp.checksum = checksum(pckt, sizeof(struct ping_request));
 }
 
 
 void ping(struct sockaddr_in *addr, struct sockaddr_in *src_addr) {
     int cnt=1;
-    struct packet pckt;
+    struct ping_request pckt;
     struct sockaddr_in r_addr;
-    struct response_packet response;
+    struct ping_response response;
+    char resp_addr[20];
 
     set_socket_options();
 
@@ -141,15 +142,20 @@ void ping(struct sockaddr_in *addr, struct sockaddr_in *src_addr) {
         if (sendto(sockfd, (const char *) &pckt, sizeof(pckt), 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 ) {
             perror("sendto error");
         } else {
-            printf("Message sent (seq=%d)\n", pckt.icmp.un.echo.sequence);
+            printf("Ping request sent! (seq=%d)\n", pckt.icmp.un.echo.sequence);
         }
 
-        if (recvfrom(sockfd, (char *) &response, sizeof(struct response_packet), 0,
+        if (recvfrom(sockfd, (char *) &response, sizeof(struct ping_response), 0,
                      (struct sockaddr *) &r_addr,
                      (socklen_t *) &len) > 0) {
 
             if (response.icmp.type == ICMP_ECHOREPLY) {
-                printf("Got Message (seq=%d)\n", response.icmp.un.echo.sequence);
+                ip_to_str(response.ip.saddr, resp_addr, sizeof(resp_addr));
+                printf("Got request! (icmp_seq=%d, ttl=%d, id=%d) from %s\n",
+                        response.icmp.un.echo.sequence,
+                        response.ip.ttl,
+                        response.ip.id,
+                        resp_addr);
             }
         }
         sleep(1);
