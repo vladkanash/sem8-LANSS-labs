@@ -8,7 +8,6 @@
 #include<stdio.h>
 #include<winsock2.h>
 #include <ws2tcpip.h>
-#include "types.h"
 #endif
 
 #include <fcntl.h>
