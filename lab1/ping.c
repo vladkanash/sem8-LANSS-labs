@@ -21,7 +21,7 @@
 #include "types.h"
 
 int sockfd, pid=-1;
-bool running = true;
+long max_packets = LONG_MAX;
 
 int init_socket() {
 #ifdef _WIN32
@@ -73,24 +73,10 @@ void set_socket_options() {
 }
 
 void get_my_addr(struct sockaddr_in *myAddr) {
-#ifdef __linux__
-    struct ifaddrs* addr, *tmp;
-    struct sockaddr_in *pAddr = NULL;
-    getifaddrs(&addr);
-    tmp = addr;
-    while (tmp) {
-        if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_INET) {
-            pAddr = (struct sockaddr_in *) tmp->ifa_addr;
-        }
-
-        tmp = tmp->ifa_next;
-    }
-
-    memcpy(myAddr, pAddr, sizeof(struct sockaddr_in));
-    freeifaddrs(addr);
-#elif _WIN32
-    //not implemented yet
-#endif
+    memset(myAddr, 0, sizeof(struct sockaddr_in));
+    myAddr->sin_family = AF_INET;
+    myAddr->sin_addr.s_addr = INADDR_ANY;
+    myAddr->sin_port = 0;
 }
 
 void init_packet(struct ping_request *pckt,
@@ -134,7 +120,7 @@ void ping(struct sockaddr_in *addr, struct sockaddr_in *src_addr) {
 
     set_socket_options();
 
-    while (running) {
+    for (int t = 0; t < max_packets; t++) {
         int len=sizeof(r_addr);
 
         init_packet(&pckt, addr, src_addr, &cnt);
@@ -174,17 +160,21 @@ void get_addr(char *host, struct sockaddr_in *addr) {
 int main(int argc, char *argv[]) {
     struct sockaddr_in dest_addr, src_addr;
 
-    if ( argc < 2 || argc > 3) {
-        printf("usage: %s <addr> [dest_addr]\n", argv[0]);
+    get_my_addr(&src_addr);
+
+    if ( argc < 2 || argc > 4) {
+        printf("usage: %s <addr> [max_packets_count] [src_addr]\n", argv[0]);
         exit(0);
     }
     init_socket();
     if (argc >= 2) {
         get_addr(argv[1], &dest_addr);
-        get_my_addr(&src_addr);
     }
-    if (argc == 3) {
-        get_addr(argv[2], &src_addr);
+    if (argc >= 3) {
+        max_packets = atoi(argv[2]);
+    }
+    if (argc == 4) {
+        get_addr(argv[3], &src_addr);
     }
 
     pid = getpid();
