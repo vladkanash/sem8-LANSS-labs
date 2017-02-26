@@ -112,7 +112,8 @@ void init_packet(struct ping_request *pckt,
 
 
 void ping(struct sockaddr_in *addr, struct sockaddr_in *src_addr) {
-    int cnt=1;
+    int cnt = 1;
+    long send_packets = 0, received_packets = 0;
     struct ping_request pckt;
     struct sockaddr_in r_addr;
     struct ping_response response;
@@ -120,15 +121,20 @@ void ping(struct sockaddr_in *addr, struct sockaddr_in *src_addr) {
 
     set_socket_options();
 
-    for (int t = 0; t < max_packets; t++) {
-        int len=sizeof(r_addr);
 
-        init_packet(&pckt, addr, src_addr, &cnt);
+    while (send_packets < max_packets ||
+            received_packets < max_packets) {
 
-        if (sendto(sockfd, (const char *) &pckt, sizeof(pckt), 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 ) {
-            perror("sendto error");
-        } else {
-            printf("Ping request sent! (seq=%d)\n", pckt.icmp.un.echo.sequence);
+        int len = sizeof(r_addr);
+
+        if (send_packets <= max_packets) {
+            init_packet(&pckt, addr, src_addr, &cnt);
+            if (sendto(sockfd, (const char *) &pckt, sizeof(pckt), 0, (struct sockaddr *) addr, sizeof(*addr)) <= 0) {
+                perror("sendto error");
+            } else {
+                printf("Ping request sent! (seq=%d)\n", pckt.icmp.un.echo.sequence);
+                send_packets++;
+            }
         }
 
         if (recvfrom(sockfd, (char *) &response, sizeof(struct ping_response), 0,
@@ -142,6 +148,7 @@ void ping(struct sockaddr_in *addr, struct sockaddr_in *src_addr) {
                         response.ip.ttl,
                         response.ip.id,
                         resp_addr);
+                received_packets++;
             }
         }
         sleep(1);
