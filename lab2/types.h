@@ -7,14 +7,21 @@
 
 #define USERNAME_SIZE 32
 #define MSG_SIZE 300
+#define MAX_MEMBERS 512
 
 #define EXIT_COMMAND "exit\n"
 
+enum packet_type {MESSAGE, MEMBER_REQUEST, MEMBER_RESPONSE, SHUTDOWN};
+
 struct chat_packet {
+    enum packet_type type;
+    unsigned long seq;
     char name[USERNAME_SIZE];
-    size_t msg_size;
     char message[MSG_SIZE];
-    #define PACKET_SIZE packet.msg_size + USERNAME_SIZE + sizeof(size_t)
 } packet;
+
+struct member {
+    char name[USERNAME_SIZE];
+};
 
 #endif //LANSS_TYPES_H
