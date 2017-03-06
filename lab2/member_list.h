@@ -8,13 +8,15 @@
 #ifndef LANSS_MEMBER_LIST_H
 #define LANSS_MEMBER_LIST_H
 
-void add_member(const char* name);
+long add_member(const char* name);
 
-bool member_exists(const char* name);
+bool member_exists(long id);
 
-void delete_member(const char* name);
+void delete_member(long id);
 
-void get_member(const char* name, struct member* member);
+void get_member(long id, struct member* member);
+
+void print_all_names();
 
 #endif //LANSS_MEMBER_LIST_H
 

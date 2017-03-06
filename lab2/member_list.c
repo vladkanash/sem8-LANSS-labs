@@ -4,41 +4,38 @@
 
 #include <wchar.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "member_list.h"
 
 static struct member members[MAX_MEMBERS];
 static int last = 0;
 
-void add_member(const char* name) {
-    if (name == NULL || member_exists(name)) {
-        return;
+long add_member(const char* name) {
+    if (name == NULL) {
+        return 0;
     }
 
     struct member new_member;
-    memcpy(&new_member, name, USERNAME_SIZE);
+    memcpy(&new_member.name, name, USERNAME_SIZE);
+    new_member.id = random();
     memcpy(&members[last++], &new_member, sizeof(struct member));
+    return new_member.id;
 }
 
-bool member_exists(const char* name) {
-    if (name == NULL) {
-        return false;
-    }
-
+bool member_exists(long id) {
     for (int i = 0; i < last; i++) {
-        if (strcmp(members[i].name, name) == 0) {
+        if (members[i].id == id) {
             return true;
         }
     }
     return false;
 }
 
-void delete_member(const char* name) {
-    if (name == NULL) {
-        return;
-    }
-
+void delete_member(long id) {
     for (int i = 0; i < last; i++) {
-        if (strcmp(members[i].name, name) == 0) {
+        if (members[i].id == id) {
             for (int k = i; k < last; k++) {
                 memcpy(&members[k], &members[k + 1], sizeof(struct member));
             }
@@ -48,15 +45,22 @@ void delete_member(const char* name) {
     }
 }
 
-void get_member(const char* name, struct member* member) {
-    if (name == NULL) {
+void get_member(long id, struct member* member) {
+    if (member == NULL) {
         return;
     }
 
     for (int i = 0; i < last; i++) {
-        if (strcmp(members[i].name, name) == 0) {
+        if (members[i].id == id) {
             memcpy(member, &members[i], sizeof(struct member));
         }
     }
     return;
+}
+
+void print_all_names() {
+    puts("All chat members:");
+    for (int i = 0; i < last; i++) {
+        printf("%d: %s\n", i+1, members[i].name);
+    }
 }

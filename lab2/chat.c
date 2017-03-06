@@ -19,14 +19,21 @@ char buf[MSG_SIZE];
 char self_name[USERNAME_SIZE];
 struct sockaddr_in addr;
 bool running = true;
+long self_id = 0;
 
 void prepare_packet();
 
-void send_packet();
+void send_packet(struct chat_packet *packet);
 
 void init_listener();
 
 void receive_packet(struct chat_packet *packet);
+
+void announce_member();
+
+long get_uuid();
+
+void announce_delete_member();
 
 int fd;
 
@@ -36,8 +43,21 @@ void* listener(void *arg) {
     while (running) {
         receive_packet(&packet);
 
-        if (strcmp(self_name, packet.name)) {
-            printf("%s: %s", packet.name, packet.message);
+        switch (packet.type) {
+            case MEMBER_REQUEST : {
+
+            }
+            case MEMBER_RESPONSE : {
+
+            }
+            case MESSAGE : {
+                if (strcmp(self_name, packet.name)) {
+                    printf("%s: %s", packet.name, packet.message);
+                }
+            }
+            case MEMBER_REMOVE : {
+
+            }
         }
     }
 }
@@ -103,7 +123,8 @@ int main(int argc, char *argv[]) {
     if (newline != NULL) {
         *newline = 0;
     }
-    add_member(self_name);
+    self_id = add_member(self_name);
+    announce_member();
     init_listener();
 
     while (1) {
@@ -115,12 +136,36 @@ int main(int argc, char *argv[]) {
 
         if (strcmp(EXIT_COMMAND, buf) == 0) {
             puts("Goodbye!");
-            delete_member(self_name);
+            delete_member(self_id);
+            announce_delete_member();
             close(fd);
             return 0;
+        } else if (strcmp(PRINT_COMMAND, buf) == 0) {
+            print_all_names();
+        } else {
+            send_packet(&packet);
         }
-        send_packet();
     }
+}
+
+void announce_delete_member() {
+    struct chat_packet packet;
+    memset(&packet, 0, sizeof(struct chat_packet));
+
+    packet.type = MEMBER_REMOVE;
+    packet.id = self_id;
+    strcpy(packet.name, self_name);
+    send_packet(&packet);
+}
+
+void announce_member() {
+    struct chat_packet packet;
+    memset(&packet, 0, sizeof(struct chat_packet));
+
+    packet.type = MEMBER_REQUEST;
+    packet.id = self_id;
+    strcpy(packet.name, self_name);
+    send_packet(&packet);
 }
 
 void init_listener() {
@@ -131,8 +176,8 @@ void init_listener() {
     }
 }
 
-void send_packet() {
-    if (sendto(fd, &packet, sizeof(struct chat_packet),
+void send_packet(struct chat_packet* packet) {
+    if (sendto(fd, packet, sizeof(struct chat_packet),
            0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
         perror("sendto error");
         exit(1);
@@ -142,6 +187,7 @@ void send_packet() {
 void prepare_packet() {
     memset(&packet, 0, sizeof(struct chat_packet));
     packet.type = MESSAGE;
+    packet.id = self_id;
     memcpy(packet.message, buf, MSG_SIZE);
     memcpy(packet.name, self_name, USERNAME_SIZE);
 }

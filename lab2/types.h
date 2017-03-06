@@ -10,10 +10,12 @@
 #define MAX_MEMBERS 512
 
 #define EXIT_COMMAND "exit\n"
+#define PRINT_COMMAND "print\n"
 
-enum packet_type {MESSAGE, MEMBER_REQUEST, MEMBER_RESPONSE, SHUTDOWN};
+enum packet_type {MESSAGE, MEMBER_REQUEST, MEMBER_RESPONSE, MEMBER_REMOVE};
 
 struct chat_packet {
+    long id;
     enum packet_type type;
     unsigned long seq;
     char name[USERNAME_SIZE];
@@ -21,6 +23,7 @@ struct chat_packet {
 } packet;
 
 struct member {
+    long id;
     char name[USERNAME_SIZE];
 };
 
