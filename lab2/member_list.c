@@ -12,7 +12,7 @@
 static struct member members[MAX_MEMBERS];
 static int last = 0;
 
-long add_member(const char* name) {
+long add_new_member(const char *name) {
     if (name == NULL) {
         return 0;
     }
@@ -64,3 +64,16 @@ void print_all_names() {
         printf("%d: %s\n", i+1, members[i].name);
     }
 }
+
+void add_existing_member(const struct chat_packet* member) {
+    if (member == NULL) {
+        return;
+    }
+
+    struct member new_member;
+    memcpy(&new_member.name, member->name, USERNAME_SIZE);
+    new_member.id = member->id;
+    memcpy(&members[last++], &new_member, sizeof(struct member));
+    return;
+}
+

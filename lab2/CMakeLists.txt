@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 
 set(SOURCE_FILES chat.c member_list.c)
-set(HEADER_FILES types.h member_list.h)
+set(HEADER_FILES types.h member_list.h chat.h)
 add_executable(LANSS_lab2 ${SOURCE_FILES} ${HEADER_FILES})
 
 find_package(Threads)

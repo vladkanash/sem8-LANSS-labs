@@ -8,7 +8,9 @@
 #ifndef LANSS_MEMBER_LIST_H
 #define LANSS_MEMBER_LIST_H
 
-long add_member(const char* name);
+long add_new_member(const char *name);
+
+void add_existing_member(const struct chat_packet *member);
 
 bool member_exists(long id);
 

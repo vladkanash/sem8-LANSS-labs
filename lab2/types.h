@@ -12,11 +12,11 @@
 #define EXIT_COMMAND "exit\n"
 #define PRINT_COMMAND "print\n"
 
-enum packet_type {MESSAGE, MEMBER_REQUEST, MEMBER_RESPONSE, MEMBER_REMOVE};
+enum packet_type {MESSAGE, MEMBER_ANNOUNCE, MEMBER_RESPONSE, MEMBER_REMOVE};
 
 struct chat_packet {
-    long id;
     enum packet_type type;
+    long id;
     unsigned long seq;
     char name[USERNAME_SIZE];
     char message[MSG_SIZE];
@@ -24,6 +24,7 @@ struct chat_packet {
 
 struct member {
     long id;
+    unsigned long seq;
     char name[USERNAME_SIZE];
 };
 

@@ -9,33 +9,20 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#include "chat.h"
 #include "types.h"
 #include "member_list.h"
 
 #define HELLO_PORT 12345
 #define HELLO_GROUP "225.0.0.37"
 
-char buf[MSG_SIZE];
-char self_name[USERNAME_SIZE];
-struct sockaddr_in addr;
-bool running = true;
-long self_id = 0;
-
-void prepare_packet();
-
-void send_packet(struct chat_packet *packet);
-
-void init_listener();
-
-void receive_packet(struct chat_packet *packet);
-
-void announce_member();
-
-long get_uuid();
-
-void announce_delete_member();
-
-int fd;
+static int fd;
+static char buf[MSG_SIZE];
+static char self_name[USERNAME_SIZE];
+static struct sockaddr_in addr;
+static bool running = true;
+static long self_id = 0;
+static unsigned long self_seq = 0;
 
 void* listener(void *arg) {
     struct chat_packet packet;
@@ -44,36 +31,32 @@ void* listener(void *arg) {
         receive_packet(&packet);
 
         switch (packet.type) {
-            case MEMBER_REQUEST : {
-
+            case MEMBER_ANNOUNCE : {
+                if (packet.id != self_id) {
+                    add_existing_member(&packet);
+                    send_member_response();
+                }
+                break;
             }
             case MEMBER_RESPONSE : {
-
+                if (packet.id != self_id && member_exists(packet.id)) {
+                    add_existing_member(&packet);
+                }
+                break;
             }
             case MESSAGE : {
                 if (strcmp(self_name, packet.name)) {
                     printf("%s: %s", packet.name, packet.message);
                 }
+                break;
             }
             case MEMBER_REMOVE : {
-
+                delete_member(packet.id); //member left the chat
+                break;
             }
         }
     }
 }
-
-void receive_packet(struct chat_packet *packet) {
-    struct sockaddr_in rcv_addr = addr;
-    int addrlen;
-    memset(packet, 0, sizeof(struct chat_packet));
-    addrlen=sizeof(addr);
-    if ((recvfrom(fd, packet, sizeof(struct chat_packet), 0,
-                  (struct sockaddr *) &rcv_addr, (socklen_t *) &addrlen)) < 0) {
-        perror("recvfrom");
-        exit(1);
-    }
-}
-
 
 int main(int argc, char *argv[]) {
     struct ip_mreq mreq;
@@ -123,7 +106,7 @@ int main(int argc, char *argv[]) {
     if (newline != NULL) {
         *newline = 0;
     }
-    self_id = add_member(self_name);
+    self_id = add_new_member(self_name);
     announce_member();
     init_listener();
 
@@ -143,8 +126,21 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(PRINT_COMMAND, buf) == 0) {
             print_all_names();
         } else {
+            self_seq++;
             send_packet(&packet);
         }
+    }
+}
+
+void receive_packet(struct chat_packet *packet) {
+    struct sockaddr_in rcv_addr = addr;
+    int addrlen;
+    memset(packet, 0, sizeof(struct chat_packet));
+    addrlen=sizeof(addr);
+    if ((recvfrom(fd, packet, sizeof(struct chat_packet), 0,
+                  (struct sockaddr *) &rcv_addr, (socklen_t *) &addrlen)) < 0) {
+        perror("recvfrom");
+        exit(1);
     }
 }
 
@@ -162,7 +158,17 @@ void announce_member() {
     struct chat_packet packet;
     memset(&packet, 0, sizeof(struct chat_packet));
 
-    packet.type = MEMBER_REQUEST;
+    packet.type = MEMBER_ANNOUNCE;
+    packet.id = self_id;
+    strcpy(packet.name, self_name);
+    send_packet(&packet);
+}
+
+void send_member_response() {
+    struct chat_packet packet;
+    memset(&packet, 0, sizeof(struct chat_packet));
+
+    packet.type = MEMBER_RESPONSE;
     packet.id = self_id;
     strcpy(packet.name, self_name);
     send_packet(&packet);
@@ -188,6 +194,7 @@ void prepare_packet() {
     memset(&packet, 0, sizeof(struct chat_packet));
     packet.type = MESSAGE;
     packet.id = self_id;
+    packet.seq = self_seq;
     memcpy(packet.message, buf, MSG_SIZE);
     memcpy(packet.name, self_name, USERNAME_SIZE);
 }
