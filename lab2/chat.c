@@ -54,14 +54,14 @@ void* listener(void *arg) {
 
         switch (packet.type) {
             case MEMBER_ANNOUNCE : {
-                if (packet.id != self_id) {
+                if (!member_exists(packet.id)) {
                     add_existing_member(&packet, ip);
                     send_member_response();
                 }
                 break;
             }
             case MEMBER_RESPONSE : {
-                if (packet.id != self_id && !member_exists(packet.id)) {
+                if (!member_exists(packet.id)) {
                     add_existing_member(&packet, ip);
                 }
                 break;
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
     if (newline != NULL) {
         *newline = 0;
     }
-    self_id = add_new_member(self_name);
+    self_id = rand();
     announce_member();
     init_listener();
 
@@ -146,6 +146,8 @@ int main(int argc, char *argv[]) {
             return 0;
         } else if (strcmp(PRINT_COMMAND, buf) == 0) {
             print_all_names();
+        } else if (strcmp(UPDATE_COMMAND, buf) == 0) {
+            update_members();
         } else {
             self_seq++;
             send_packet(&packet);
@@ -178,7 +180,6 @@ unsigned long receive_packet(struct chat_packet *packet) {
     addrlen=sizeof(source_addr);
     if ((recvfrom(sockfd, (char *) packet, sizeof(struct chat_packet), 0,
                   (struct sockaddr *) &rcv_addr, (socklen_t *) &addrlen)) < 0) {
-        printf("%d\n", WSAGetLastError());
         perror("recvfrom");
         exit(1);
     }
@@ -238,6 +239,12 @@ void prepare_packet() {
     packet.seq = self_seq;
     memcpy(packet.message, buf, MSG_SIZE);
     memcpy(packet.name, self_name, USERNAME_SIZE);
+}
+
+void update_members() {
+    clear_members();
+    announce_member();
+    puts("Member list updated");
 }
 
 int init_socket() {

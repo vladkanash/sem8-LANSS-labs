@@ -26,4 +26,6 @@ void init_addr();
 
 void set_seed();
 
+void update_members();
+
 #endif //LANSS_CHAT_H

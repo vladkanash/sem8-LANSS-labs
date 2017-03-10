@@ -101,3 +101,8 @@ void add_existing_member(const struct chat_packet* member, unsigned long ip) {
     return;
 }
 
+void clear_members() {
+    last = 0;
+    memset(members, 0, sizeof(struct member) * MAX_MEMBERS);
+}
+

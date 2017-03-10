@@ -11,6 +11,7 @@
 
 #define EXIT_COMMAND "exit\n"
 #define PRINT_COMMAND "print\n"
+#define UPDATE_COMMAND "update\n"
 
 enum packet_type {MESSAGE, MEMBER_ANNOUNCE, MEMBER_RESPONSE, MEMBER_REMOVE};
 

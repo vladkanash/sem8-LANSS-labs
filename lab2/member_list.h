@@ -20,5 +20,7 @@ void get_member(int id, struct member* member);
 
 void print_all_names();
 
+void clear_members();
+
 #endif //LANSS_MEMBER_LIST_H
 
