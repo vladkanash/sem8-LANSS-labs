@@ -30,12 +30,17 @@
 #define HELLO_PORT 12345
 #define HELLO_GROUP "225.0.0.37"
 
+#ifdef _WIN32
 static SOCKET sockfd;
+#elif __linux__
+static int sockfd;
+#endif
+
 static char buf[MSG_SIZE];
 static char self_name[USERNAME_SIZE];
 static struct sockaddr_in addr;
 
-int init_socket() ;
+int init_socket();
 
 static bool running = true;
 static long self_id = 0;
@@ -43,21 +48,22 @@ static unsigned long self_seq = 0;
 
 void* listener(void *arg) {
     struct chat_packet packet;
+    unsigned long ip = 0;
 
     while (running) {
-        receive_packet(&packet);
+        ip = receive_packet(&packet);
 
         switch (packet.type) {
             case MEMBER_ANNOUNCE : {
                 if (packet.id != self_id) {
-                    add_existing_member(&packet);
+                    add_existing_member(&packet, ip);
                     send_member_response();
                 }
                 break;
             }
             case MEMBER_RESPONSE : {
-                if (packet.id != self_id && member_exists(packet.id)) {
-                    add_existing_member(&packet);
+                if (packet.id != self_id && !member_exists(packet.id)) {
+                    add_existing_member(&packet, ip);
                 }
                 break;
             }
@@ -79,6 +85,7 @@ int main(int argc, char *argv[]) {
     struct ip_mreq mreq;
     u_int yes=1;
     char* newline;
+    srand(17);
 
     memset(&packet, 0, sizeof(struct chat_packet));
 
@@ -155,7 +162,7 @@ int main(int argc, char *argv[]) {
     }
 }
 
-void receive_packet(struct chat_packet *packet) {
+unsigned long receive_packet(struct chat_packet *packet) {
     struct sockaddr_in rcv_addr = addr;
     int addrlen;
     memset(packet, 0, sizeof(struct chat_packet));
@@ -165,6 +172,7 @@ void receive_packet(struct chat_packet *packet) {
         perror("recvfrom");
         exit(1);
     }
+    return rcv_addr.sin_addr.s_addr;
 }
 
 void announce_delete_member() {
@@ -232,7 +240,7 @@ int init_socket() {
     }
     printf("Initialised.\n");
 
-    if((sockfd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, 0)) == INVALID_SOCKET) {
+    if((sockfd = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_IP, 0, 0, 0)) == INVALID_SOCKET) {
         printf("Could not create socket : %d" , WSAGetLastError());
     }
     printf("Socket created.\n");

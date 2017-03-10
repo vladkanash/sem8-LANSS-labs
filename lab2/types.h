@@ -26,6 +26,7 @@ struct member {
     long id;
     unsigned long seq;
     char name[USERNAME_SIZE];
+    char ip[20];
 };
 
 #endif //LANSS_TYPES_H

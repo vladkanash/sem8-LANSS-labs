@@ -10,7 +10,7 @@
 
 long add_new_member(const char *name);
 
-void add_existing_member(const struct chat_packet *member);
+void add_existing_member(const struct chat_packet *member, unsigned long ip);
 
 bool member_exists(long id);
 

@@ -31,7 +31,7 @@ long get_uuid() {
 #ifdef WIN32
     return rand();
 #elif __linux__
-    return random();
+    return rand();
 #endif
 }
 
@@ -72,17 +72,34 @@ void get_member(long id, struct member* member) {
 void print_all_names() {
     puts("All chat members:");
     for (int i = 0; i < last; i++) {
-        printf("%d: %s\n", i+1, members[i].name);
+        printf("%d: %s (%s)\n", i+1, members[i].name, members[i].ip);
     }
 }
 
-void add_existing_member(const struct chat_packet* member) {
-    if (member == NULL) {
+void ip_to_str(unsigned long ip, char *str, size_t size) {
+    if (size < 16) {
         return;
     }
 
+    memset(str, 0, size);
+    unsigned char bytes[4];
+    bytes[0] = ip & 0xFF;
+    bytes[1] = (ip >> 8) & 0xFF;
+    bytes[2] = (ip >> 16) & 0xFF;
+    bytes[3] = (ip >> 24) & 0xFF;
+    sprintf(str, "%d.%d.%d.%d", bytes[0], bytes[1], bytes[2], bytes[3]);
+}
+
+void add_existing_member(const struct chat_packet* member, unsigned long ip) {
+    if (member == NULL) {
+        return;
+    }
+    char ip_str[20];
+    ip_to_str(ip, ip_str, 20);
+
     struct member new_member;
     memcpy(&new_member.name, member->name, USERNAME_SIZE);
+    memcpy(&new_member.ip, ip_str, 20);
     new_member.id = member->id;
     memcpy(&members[last++], &new_member, sizeof(struct member));
     return;

@@ -12,7 +12,7 @@ void send_packet(struct chat_packet *packet);
 
 void init_listener();
 
-void receive_packet(struct chat_packet *packet);
+unsigned long receive_packet(struct chat_packet *packet);
 
 void announce_member();
 
