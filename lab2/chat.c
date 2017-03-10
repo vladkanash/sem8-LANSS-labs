@@ -56,8 +56,9 @@ void* listener(void *arg) {
             case MEMBER_ANNOUNCE : {
                 if (!member_exists(packet.id)) {
                     add_existing_member(&packet, ip);
-                    send_member_response();
+                    printf("Welcome to chat, %s\n", packet.name);
                 }
+                send_member_response();
                 break;
             }
             case MEMBER_RESPONSE : {
@@ -73,6 +74,9 @@ void* listener(void *arg) {
                 break;
             }
             case MEMBER_REMOVE : {
+                struct member mem;
+                get_member(packet.id, &mem);
+                printf("%s (%s) left the chat...\n", mem.name, mem.ip);
                 delete_member(packet.id); //member left the chat
                 break;
             }
@@ -121,7 +125,6 @@ int main(int argc, char *argv[]) {
 
     printf("Enter your name, stranger: ");
     fgets(self_name, USERNAME_SIZE, stdin);
-    printf("Welcome to chat %s\n", MULTICAST_GROUP);
 
     newline = strchr(self_name, '\n');
     if (newline != NULL) {
