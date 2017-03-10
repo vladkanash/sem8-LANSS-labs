@@ -1,3 +1,4 @@
+#ifdef __linux__
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -9,17 +10,33 @@
 #include <unistd.h>
 #include <pthread.h>
 
+
+#include <sys/socket.h>
+#include <resolv.h>
+#include <netdb.h>
+#include <netinet/ip_icmp.h>
+#include <ifaddrs.h>
+#elif _WIN32
+#include<stdio.h>
+#include<winsock2.h>
+#include <ws2tcpip.h>
+#include <pthread.h>
+
+#endif
+
 #include "chat.h"
-#include "types.h"
 #include "member_list.h"
 
 #define HELLO_PORT 12345
 #define HELLO_GROUP "225.0.0.37"
 
-static int fd;
+static SOCKET sockfd;
 static char buf[MSG_SIZE];
 static char self_name[USERNAME_SIZE];
 static struct sockaddr_in addr;
+
+int init_socket() ;
+
 static bool running = true;
 static long self_id = 0;
 static unsigned long self_seq = 0;
@@ -65,17 +82,23 @@ int main(int argc, char *argv[]) {
 
     memset(&packet, 0, sizeof(struct chat_packet));
 
-    /* create what looks like an ordinary UDP socket */
-    if ((fd=socket(AF_INET,SOCK_DGRAM,0)) < 0) {
-        perror("socket");
-        exit(1);
-    } else {
-        puts("Socket successfully created!\n");
-    }
+    init_socket();
 
     /* allow multiple sockets to use the same PORT number */
-    if (setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes)) < 0) {
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char *) &yes, sizeof(yes)) < 0) {
         perror("Reusing ADDR failed");
+        exit(1);
+    }
+
+    struct  ip_mreq         multi;
+
+    mreq.imr_multiaddr.s_addr=inet_addr(HELLO_GROUP);
+    mreq.imr_interface.s_addr=htonl(INADDR_ANY);
+
+    if (setsockopt(sockfd, IPPROTO_IP, IP_MULTICAST_IF,
+                   (char *)&multi.imr_interface.s_addr,
+                   sizeof(multi.imr_interface.s_addr)) < 0) {
+        perror("setsockoption");
         exit(1);
     }
 
@@ -86,14 +109,14 @@ int main(int argc, char *argv[]) {
     addr.sin_port=htons(HELLO_PORT);
 
     /* bind to receive address */
-    if (bind(fd,(struct sockaddr *) &addr, sizeof(addr)) < 0) {
+    if (bind(sockfd,(struct sockaddr *) &addr, sizeof(struct sockaddr_in)) < 0) {
         perror("bind");
         exit(1);
     }
 
     mreq.imr_multiaddr.s_addr=inet_addr(HELLO_GROUP);
     mreq.imr_interface.s_addr=htonl(INADDR_ANY);
-    if (setsockopt(fd,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreq,sizeof(mreq)) < 0) {
+    if (setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char *) &mreq, sizeof(mreq)) < 0) {
         perror("setsockopt");
         exit(1);
     }
@@ -121,7 +144,7 @@ int main(int argc, char *argv[]) {
             puts("Goodbye!");
             delete_member(self_id);
             announce_delete_member();
-            close(fd);
+            //close(sockfd); TODO: close socket
             return 0;
         } else if (strcmp(PRINT_COMMAND, buf) == 0) {
             print_all_names();
@@ -137,7 +160,7 @@ void receive_packet(struct chat_packet *packet) {
     int addrlen;
     memset(packet, 0, sizeof(struct chat_packet));
     addrlen=sizeof(addr);
-    if ((recvfrom(fd, packet, sizeof(struct chat_packet), 0,
+    if ((recvfrom(sockfd, (char *) packet, sizeof(struct chat_packet), 0,
                   (struct sockaddr *) &rcv_addr, (socklen_t *) &addrlen)) < 0) {
         perror("recvfrom");
         exit(1);
@@ -183,8 +206,8 @@ void init_listener() {
 }
 
 void send_packet(struct chat_packet* packet) {
-    if (sendto(fd, packet, sizeof(struct chat_packet),
-           0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+    if (sendto(sockfd, (const char *) packet, sizeof(struct chat_packet),
+               0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
         perror("sendto error");
         exit(1);
     }
@@ -197,4 +220,32 @@ void prepare_packet() {
     packet.seq = self_seq;
     memcpy(packet.message, buf, MSG_SIZE);
     memcpy(packet.name, self_name, USERNAME_SIZE);
+}
+
+int init_socket() {
+#ifdef _WIN32
+    WSADATA wsa;
+    printf("\nInitialising Winsock...");
+    if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
+        printf("Failed. Error Code : %d",WSAGetLastError());
+        exit(EXIT_FAILURE);
+    }
+    printf("Initialised.\n");
+
+    if((sockfd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, 0)) == INVALID_SOCKET) {
+        printf("Could not create socket : %d" , WSAGetLastError());
+    }
+    printf("Socket created.\n");
+    return sockfd;
+#elif __linux__
+    /* create what looks like an ordinary UDP socket */
+    if ((sockfd=socket(AF_INET,SOCK_DGRAM,0)) < 0) {
+        perror("socket");
+        exit(1);
+    } else {
+        puts("Socket successfully created!\n");
+    }
+#else
+    return 0;
+#endif
 }

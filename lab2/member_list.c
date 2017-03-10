@@ -10,6 +10,9 @@
 #include "member_list.h"
 
 static struct member members[MAX_MEMBERS];
+
+long get_uuid();
+
 static int last = 0;
 
 long add_new_member(const char *name) {
@@ -19,9 +22,17 @@ long add_new_member(const char *name) {
 
     struct member new_member;
     memcpy(&new_member.name, name, USERNAME_SIZE);
-    new_member.id = random();
+    new_member.id = get_uuid();
     memcpy(&members[last++], &new_member, sizeof(struct member));
     return new_member.id;
+}
+
+long get_uuid() {
+#ifdef WIN32
+    return rand();
+#elif __linux__
+    return random();
+#endif
 }
 
 bool member_exists(long id) {
