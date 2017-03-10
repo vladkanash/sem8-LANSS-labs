@@ -42,8 +42,8 @@ static char self_name[USERNAME_SIZE];
 static struct sockaddr_in source_addr, dest_addr;
 
 static bool running = true;
-static long self_id = 0;
-static unsigned long self_seq = 0;
+static int self_id = 0;
+static int self_seq = 0;
 
 void* listener(void *arg) {
     struct chat_packet packet;
@@ -178,6 +178,7 @@ unsigned long receive_packet(struct chat_packet *packet) {
     addrlen=sizeof(source_addr);
     if ((recvfrom(sockfd, (char *) packet, sizeof(struct chat_packet), 0,
                   (struct sockaddr *) &rcv_addr, (socklen_t *) &addrlen)) < 0) {
+        printf("%d\n", WSAGetLastError());
         perror("recvfrom");
         exit(1);
     }

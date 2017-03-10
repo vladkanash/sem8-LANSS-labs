@@ -16,15 +16,15 @@ enum packet_type {MESSAGE, MEMBER_ANNOUNCE, MEMBER_RESPONSE, MEMBER_REMOVE};
 
 struct chat_packet {
     enum packet_type type;
-    long id;
-    unsigned long seq;
+    int id;
+    int seq;
     char name[USERNAME_SIZE];
     char message[MSG_SIZE];
 } packet;
 
 struct member {
-    long id;
-    unsigned long seq;
+    int id;
+    int seq;
     char name[USERNAME_SIZE];
     char ip[20];
 };

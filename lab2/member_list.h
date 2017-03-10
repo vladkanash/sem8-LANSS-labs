@@ -12,11 +12,11 @@ long add_new_member(const char *name);
 
 void add_existing_member(const struct chat_packet *member, unsigned long ip);
 
-bool member_exists(long id);
+bool member_exists(int id);
 
-void delete_member(long id);
+void delete_member(int id);
 
-void get_member(long id, struct member* member);
+void get_member(int id, struct member* member);
 
 void print_all_names();
 

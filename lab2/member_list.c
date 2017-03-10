@@ -11,7 +11,7 @@
 
 static struct member members[MAX_MEMBERS];
 
-long get_uuid();
+int get_uuid();
 
 static int last = 0;
 
@@ -27,15 +27,11 @@ long add_new_member(const char *name) {
     return new_member.id;
 }
 
-long get_uuid() {
-#ifdef WIN32
+int get_uuid() {
     return rand();
-#elif __linux__
-    return rand();
-#endif
 }
 
-bool member_exists(long id) {
+bool member_exists(int id) {
     for (int i = 0; i < last; i++) {
         if (members[i].id == id) {
             return true;
@@ -44,7 +40,7 @@ bool member_exists(long id) {
     return false;
 }
 
-void delete_member(long id) {
+void delete_member(int id) {
     for (int i = 0; i < last; i++) {
         if (members[i].id == id) {
             for (int k = i; k < last; k++) {
@@ -56,7 +52,7 @@ void delete_member(long id) {
     }
 }
 
-void get_member(long id, struct member* member) {
+void get_member(int id, struct member* member) {
     if (member == NULL) {
         return;
     }
