@@ -21,14 +21,15 @@
 #include<winsock2.h>
 #include <ws2tcpip.h>
 #include <pthread.h>
+#include <time.h>
 
 #endif
 
 #include "chat.h"
 #include "member_list.h"
 
-#define HELLO_PORT 12345
-#define HELLO_GROUP "225.0.0.37"
+#define PORT 12345
+#define MULTICAST_GROUP "225.0.0.37"
 
 #ifdef _WIN32
 static SOCKET sockfd;
@@ -38,9 +39,7 @@ static int sockfd;
 
 static char buf[MSG_SIZE];
 static char self_name[USERNAME_SIZE];
-static struct sockaddr_in addr;
-
-int init_socket();
+static struct sockaddr_in source_addr, dest_addr;
 
 static bool running = true;
 static long self_id = 0;
@@ -85,23 +84,20 @@ int main(int argc, char *argv[]) {
     struct ip_mreq mreq;
     u_int yes=1;
     char* newline;
-    srand(17);
+    set_seed();
 
     memset(&packet, 0, sizeof(struct chat_packet));
 
     init_socket();
 
-    /* allow multiple sockets to use the same PORT number */
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char *) &yes, sizeof(yes)) < 0) {
         perror("Reusing ADDR failed");
         exit(1);
     }
 
-    struct  ip_mreq         multi;
-
-    mreq.imr_multiaddr.s_addr=inet_addr(HELLO_GROUP);
+    struct  ip_mreq  multi;
+    mreq.imr_multiaddr.s_addr=inet_addr(MULTICAST_GROUP);
     mreq.imr_interface.s_addr=htonl(INADDR_ANY);
-
     if (setsockopt(sockfd, IPPROTO_IP, IP_MULTICAST_IF,
                    (char *)&multi.imr_interface.s_addr,
                    sizeof(multi.imr_interface.s_addr)) < 0) {
@@ -109,19 +105,14 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    /* set up destination address */
-    memset(&addr,0,sizeof(addr));
-    addr.sin_family=AF_INET;
-    addr.sin_addr.s_addr=inet_addr(HELLO_GROUP);
-    addr.sin_port=htons(HELLO_PORT);
+    init_addr();
 
-    /* bind to receive address */
-    if (bind(sockfd,(struct sockaddr *) &addr, sizeof(struct sockaddr_in)) < 0) {
+    if (bind(sockfd,(struct sockaddr *) &source_addr, sizeof(struct sockaddr_in)) < 0) {
         perror("bind");
         exit(1);
     }
 
-    mreq.imr_multiaddr.s_addr=inet_addr(HELLO_GROUP);
+    mreq.imr_multiaddr.s_addr=inet_addr(MULTICAST_GROUP);
     mreq.imr_interface.s_addr=htonl(INADDR_ANY);
     if (setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char *) &mreq, sizeof(mreq)) < 0) {
         perror("setsockopt");
@@ -130,7 +121,7 @@ int main(int argc, char *argv[]) {
 
     printf("Enter your name, stranger: ");
     fgets(self_name, USERNAME_SIZE, stdin);
-    printf("Welcome to chat %s\n", HELLO_GROUP);
+    printf("Welcome to chat %s\n", MULTICAST_GROUP);
 
     newline = strchr(self_name, '\n');
     if (newline != NULL) {
@@ -162,11 +153,29 @@ int main(int argc, char *argv[]) {
     }
 }
 
+void set_seed() {
+    time_t rawtime;
+    time(&rawtime);
+    srand((unsigned int) rawtime);
+}
+
+void init_addr() {
+    memset(&source_addr, 0, sizeof(source_addr));
+    source_addr.sin_family=AF_INET;
+    source_addr.sin_addr.s_addr=htonl(INADDR_ANY);
+    source_addr.sin_port=htons(PORT);
+
+    memset(&dest_addr,0,sizeof(dest_addr));
+    dest_addr.sin_family=AF_INET;
+    dest_addr.sin_addr.s_addr=inet_addr(MULTICAST_GROUP);
+    dest_addr.sin_port=htons(PORT);
+}
+
 unsigned long receive_packet(struct chat_packet *packet) {
-    struct sockaddr_in rcv_addr = addr;
+    struct sockaddr_in rcv_addr = source_addr;
     int addrlen;
     memset(packet, 0, sizeof(struct chat_packet));
-    addrlen=sizeof(addr);
+    addrlen=sizeof(source_addr);
     if ((recvfrom(sockfd, (char *) packet, sizeof(struct chat_packet), 0,
                   (struct sockaddr *) &rcv_addr, (socklen_t *) &addrlen)) < 0) {
         perror("recvfrom");
@@ -215,7 +224,7 @@ void init_listener() {
 
 void send_packet(struct chat_packet* packet) {
     if (sendto(sockfd, (const char *) packet, sizeof(struct chat_packet),
-               0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+               0, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr_in)) < 0) {
         perror("sendto error");
         exit(1);
     }
@@ -240,7 +249,7 @@ int init_socket() {
     }
     printf("Initialised.\n");
 
-    if((sockfd = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_IP, 0, 0, 0)) == INVALID_SOCKET) {
+    if ((sockfd = socket (AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)  {
         printf("Could not create socket : %d" , WSAGetLastError());
     }
     printf("Socket created.\n");

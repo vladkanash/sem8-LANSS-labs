@@ -20,4 +20,10 @@ void announce_delete_member();
 
 void send_member_response();
 
+int init_socket();
+
+void init_addr();
+
+void set_seed();
+
 #endif //LANSS_CHAT_H
